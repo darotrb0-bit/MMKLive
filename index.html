@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>កម្មវិធីតាមដានទីតាំងបុគ្គលិក</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- LeafletJS for Map Display -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        body {
+            font-family: 'Kantumruy Pro', sans-serif;
+        }
+        #map {
+            height: 400px;
+            border-radius: 0.5rem;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 0.5rem;
+        }
+        .blinking-dot {
+            height: 12px;
+            width: 12px;
+            background-color: #22c55e; /* green-500 */
+            border-radius: 50%;
+            display: inline-block;
+            animation: blink-animation 1s steps(5, start) infinite;
+            -webkit-animation: blink-animation 1s steps(5, start) infinite;
+        }
+        @keyframes blink-animation {
+            to {
+                visibility: hidden;
+            }
+        }
+        @-webkit-keyframes blink-animation {
+            to {
+                visibility: hidden;
+            }
+        }
+    </style>
+    <!-- Add Khmer Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div id="app-container" class="w-full max-w-4xl bg-white p-6 md:p-8 rounded-xl shadow-lg">
+
+        <!-- Role Selection View -->
+        <div id="role-selection-view">
+            <div class="text-center">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">សូមស្វាគមន៍!</h1>
+                <p class="text-gray-600 mb-8">សូមជ្រើសរើសតួនាទីរបស់អ្នក ដើម្បីបន្ត</p>
+                <div class="flex flex-col md:flex-row gap-4 justify-center">
+                    <button id="select-employee-btn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-md">
+                        <span class="flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            ខ្ញុំជាបុគ្គលិក
+                        </span>
+                    </button>
+                    <button id="select-admin-btn" class="w-full md:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-md">
+                        <span class="flex items-center justify-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a4 4 0 014 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M15 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M9 3a4 4 0 014 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a4 4 0 014 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M21 17v-2a4 4 0 00-4-4h-1a4 4 0 00-4 4v2" />
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M15 3a4 4 0 014 4v2" />
+                            </svg>
+                            ខ្ញុំជាអ្នកគ្រប់គ្រង
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee View -->
+        <div id="employee-view" class="hidden">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4 text-center">សម្រាប់បុគ្គលិក</h1>
+            <p class="text-gray-600 mb-6 text-center">សូមបញ្ចូលឈ្មោះ និងចាប់ផ្តើមចែករំលែកទីតាំងរបស់អ្នក។</p>
+            <div class="space-y-4">
+                <input type="text" id="employee-name-input" placeholder="បញ្ចូលឈ្មោះរបស់អ្នក" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                <button id="start-sharing-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 shadow-md">ចាប់ផ្តើមចែករំលែកទីតាំង</button>
+            </div>
+            <div id="employee-status" class="mt-6 text-center p-4 bg-gray-50 rounded-lg">
+                <p class="text-gray-700">ស្ថានភាព៖ <span class="font-semibold">មិនទាន់ដំណើរការ</span></p>
+                <p id="user-id-display" class="text-sm text-gray-500 mt-2 break-all"></p>
+            </div>
+             <button id="employee-back-btn" class="mt-4 text-sm text-blue-600 hover:underline">&larr; ត្រឡប់ក្រោយ</button>
+        </div>
+
+        <!-- Admin View -->
+        <div id="admin-view" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                 <h1 class="text-2xl font-bold text-gray-800">ផ្ទាំងគ្រប់គ្រង</h1>
+                 <button id="admin-back-btn" class="text-sm text-blue-600 hover:underline">&larr; ត្រឡប់ក្រោយ</button>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Map -->
+                <div class="w-full md:w-2/3">
+                    <div id="map" class="shadow-md"></div>
+                </div>
+                <!-- Employee List -->
+                <div class="w-full md:w-1/3 bg-gray-50 p-4 rounded-lg h-[400px] overflow-y-auto">
+                    <h2 class="text-lg font-semibold mb-3 border-b pb-2">បញ្ជីបុគ្គលិក</h2>
+                    <div id="employee-list">
+                        <p class="text-gray-500 text-center py-4">កំពុងទាញយកទិន្នន័យ...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements ---
+        const roleSelectionView = document.getElementById('role-selection-view');
+        const employeeView = document.getElementById('employee-view');
+        const adminView = document.getElementById('admin-view');
+        
+        const selectEmployeeBtn = document.getElementById('select-employee-btn');
+        const selectAdminBtn = document.getElementById('select-admin-btn');
+        const employeeBackBtn = document.getElementById('employee-back-btn');
+        const adminBackBtn = document.getElementById('admin-back-btn');
+        
+        const employeeNameInput = document.getElementById('employee-name-input');
+        const startSharingBtn = document.getElementById('start-sharing-btn');
+        const employeeStatus = document.getElementById('employee-status');
+        const userIdDisplay = document.getElementById('user-id-display');
+        
+        const mapContainer = document.getElementById('map');
+        const employeeList = document.getElementById('employee-list');
+
+        // --- App State ---
+        let db, auth, userId;
+        let locationWatchId = null;
+        let map;
+        let employeeMarkers = {};
+        
+        // --- Firebase Config (Provided by environment) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch (e) {
+            console.error("Failed to parse Firebase config:", e);
+            firebaseConfig = null;
+        }
+
+
+        // --- Main App Logic ---
+        async function initialize() {
+            if (!firebaseConfig) {
+                showError("Firebase configuration is missing or invalid. The app cannot start.");
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setupAuthListener();
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                showError("Could not connect to the backend service.");
+            }
+        }
+
+        function setupAuthListener() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("Authenticated User ID:", userId);
+                    // User is signed in.
+                } else {
+                    // User is signed out. Attempt to sign in.
+                    await authenticate();
+                }
+            });
+        }
+        
+        async function authenticate() {
+             try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                showError("Authentication failed. Please refresh the page.");
+            }
+        }
+
+        function switchView(viewName) {
+            roleSelectionView.classList.add('hidden');
+            employeeView.classList.add('hidden');
+            adminView.classList.add('hidden');
+            
+            if (viewName === 'role') {
+                roleSelectionView.classList.remove('hidden');
+            } else if (viewName === 'employee') {
+                employeeView.classList.remove('hidden');
+                userIdDisplay.textContent = `លេខកូដសម្គាល់ខ្លួន៖ ${userId}`;
+            } else if (viewName === 'admin') {
+                adminView.classList.remove('hidden');
+                initializeAdminView();
+            }
+        }
+
+        // --- Employee Logic ---
+        function handleStartSharing() {
+            if (!userId) {
+                showError("សូមរង់ចាំបន្តិច... កំពុងតភ្ជាប់។");
+                return;
+            }
+            
+            const employeeName = employeeNameInput.value.trim();
+            if (!employeeName) {
+                alert('សូមបញ្ចូលឈ្មោះរបស់អ្នក!');
+                return;
+            }
+
+            if (locationWatchId) { // Already watching
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+                startSharingBtn.textContent = 'ចាប់ផ្តើមចែករំលែកទីតាំង';
+                startSharingBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                startSharingBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                employeeStatus.innerHTML = '<p class="text-gray-700">ស្ថានភាព៖ <span class="font-semibold text-red-600">បានផ្អាក</span></p>';
+                return;
+            }
+
+            if ('geolocation' in navigator) {
+                locationWatchId = navigator.geolocation.watchPosition(
+                    async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        
+                        try {
+                            const employeeLocationRef = doc(db, `artifacts/${appId}/public/data/employee_locations`, userId);
+                            await setDoc(employeeLocationRef, {
+                                employeeId: userId,
+                                employeeName: employeeName,
+                                latitude: latitude,
+                                longitude: longitude,
+                                timestamp: serverTimestamp()
+                            }, { merge: true });
+
+                            const now = new Date();
+                            employeeStatus.innerHTML = `
+                                <p class="text-green-600 font-semibold flex items-center justify-center">
+                                    <span class="blinking-dot mr-2"></span>កំពុងចែករំលែកទីតាំង...
+                                </p>
+                                <p class="text-sm text-gray-500 mt-1">ធ្វើបច្ចុប្បន្នភាពចុងក្រោយ៖ ${now.toLocaleTimeString('km-KH')}</p>
+                            `;
+
+                        } catch (error) {
+                            console.error("Error writing to Firestore:", error);
+                            showError("មិនអាចរក្សាទុកទីតាំងបានទេ។");
+                        }
+                    },
+                    (error) => {
+                        console.error("Geolocation error:", error);
+                        let message = "មានបញ្ហាក្នុងការទទួលបានទីតាំង។";
+                        if (error.code === 1) message = "សូមអនុញ្ញាតឲ្យកម្មវិធីទទួលបានទីតាំងរបស់អ្នក។";
+                        showError(message);
+                        employeeStatus.innerHTML = `<p class="text-red-600 font-semibold">${message}</p>`;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+
+                startSharingBtn.textContent = 'ឈប់ចែករំលែកទីតាំង';
+                startSharingBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                startSharingBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+
+            } else {
+                showError("កម្មវិធី Browser របស់អ្នកមិនគាំទ្រ Geolocation ទេ។");
+            }
+        }
+
+        // --- Admin Logic ---
+        function initializeAdminView() {
+            if (!map) { // Initialize map only once
+                map = L.map('map').setView([11.5564, 104.9282], 13); // Default to Phnom Penh
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
+            listenForEmployeeUpdates();
+        }
+        
+        function listenForEmployeeUpdates() {
+            const locationsRef = collection(db, `artifacts/${appId}/public/data/employee_locations`);
+            onSnapshot(locationsRef, (querySnapshot) => {
+                if (querySnapshot.empty) {
+                    employeeList.innerHTML = '<p class="text-gray-500 text-center py-4">មិនទាន់មានទិន្នន័យបុគ្គលិកនៅឡើយ។</p>';
+                    return;
+                }
+                
+                employeeList.innerHTML = ''; // Clear list
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    updateEmployeeOnMap(data);
+                    updateEmployeeInList(data);
+                });
+            }, (error) => {
+                console.error("Error listening to collection:", error);
+                showError("មិនអាចទាញយកទិន្នន័យបានទេ។");
+            });
+        }
+
+        function updateEmployeeOnMap(data) {
+            const { latitude, longitude, employeeName, employeeId, timestamp } = data;
+            const latLng = [latitude, longitude];
+
+            const lastUpdated = timestamp ? timestamp.toDate().toLocaleString('km-KH') : 'មិនមាន';
+            const popupContent = `<b>${employeeName}</b><br>បានធ្វើបច្ចុប្បន្នភាពនៅ៖<br>${lastUpdated}`;
+            
+            if (employeeMarkers[employeeId]) {
+                employeeMarkers[employeeId].setLatLng(latLng).setPopupContent(popupContent);
+            } else {
+                employeeMarkers[employeeId] = L.marker(latLng).addTo(map)
+                    .bindPopup(popupContent);
+            }
+        }
+        
+        function updateEmployeeInList(data) {
+            const { employeeName, employeeId, timestamp } = data;
+            
+            const listItem = document.createElement('div');
+            listItem.className = 'p-3 mb-2 bg-white rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:bg-blue-50';
+            listItem.onclick = () => {
+                if (employeeMarkers[employeeId]) {
+                    map.flyTo(employeeMarkers[employeeId].getLatLng(), 16);
+                    employeeMarkers[employeeId].openPopup();
+                }
+            };
+            
+            const lastUpdated = timestamp ? timeAgo(timestamp.toDate()) : 'មិនមាន';
+            const isOnline = timestamp && (new Date() - timestamp.toDate() < 5 * 60 * 1000); // Online if updated in last 5 mins
+
+            listItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <p class="font-semibold text-gray-800">${employeeName}</p>
+                    ${isOnline ? '<span class="blinking-dot"></span>' : '<span class="h-3 w-3 bg-gray-400 rounded-full"></span>'}
+                </div>
+                <p class="text-xs text-gray-500">Update: ${lastUpdated}</p>
+            `;
+            employeeList.appendChild(listItem);
+        }
+
+        // --- Utility Functions ---
+        function showError(message) {
+            alert(message); // Simple alert for errors
+        }
+
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " ឆ្នាំមុន";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " ខែមុន";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " ថ្ងៃមុន";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " ម៉ោងមុន";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " នាទីមុន";
+            return "អម្បាញ់មិញ";
+        }
+
+
+        // --- Event Listeners ---
+        selectEmployeeBtn.addEventListener('click', () => switchView('employee'));
+        selectAdminBtn.addEventListener('click', () => switchView('admin'));
+        employeeBackBtn.addEventListener('click', () => switchView('role'));
+        adminBackBtn.addEventListener('click', () => switchView('role'));
+        startSharingBtn.addEventListener('click', handleStartSharing);
+
+        // --- Initialize the app ---
+        window.onload = initialize;
+
+    </script>
+</body>
+</html>
